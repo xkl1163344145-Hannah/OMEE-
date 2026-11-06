@@ -755,10 +755,13 @@ export class Domain {
       j.choice === "self" ? "self_completed" : "ordered",
       id,
     );
+    // Procurement remains bound to its approved submission; a later draft must not be relocked.
+    const approvedVersion = JSON.parse(a.payload).version;
     this.s.run(
-      "UPDATE projects SET status=? WHERE id=?",
+      "UPDATE projects SET status=? WHERE id=? AND version=? AND status='finalized'",
       j.choice === "self" ? "self_completed" : "ordered",
       a.project_id,
+      approvedVersion,
     );
     this.audit(u, "procurement." + j.choice, id);
     return { choice: j.choice, order };
@@ -794,7 +797,12 @@ export class Domain {
   payment(provider, event, raw) {
     if (provider !== "sandbox")
       fail(503, "PAYMENT_PROVIDER", "尚未配置正式支付适配器");
+    if (!event || typeof event !== "object" || Array.isArray(event))
+      fail(422, "PAYMENT_EVENT", "支付事件必须为对象");
     const { eventId, orderId, amountFen, currency } = event;
+    text(orderId, 120);
+    integer(amountFen, 0, Number.MAX_SAFE_INTEGER);
+    if (currency !== "CNY") fail(422, "PAYMENT_AMOUNT", "付款币种无效");
     text(eventId, 100);
     const prior = this.s.get(
       "SELECT * FROM payment_events WHERE provider=? AND event_id=?",

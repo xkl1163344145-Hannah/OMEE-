@@ -384,3 +384,59 @@ test("恶意空几何字段返回校验错误而非崩溃", () => {
   ])
     assert.ok(validateScene(bad).length > 0);
 });
+
+test("旧提交选择自购或平台购不能覆盖新修订草稿状态", (t) => {
+  for (const choice of ["self", "platform"]) {
+    const x = fixture(t),
+      a = final(x);
+    const p = x.s.tx(() =>
+      x.d.fork(x.designer, x.p.id, { expectedVersion: x.p.version }),
+    );
+    const scene = structuredClone(p.scene);
+    scene.objects[0].x += 100;
+    const draft = x.s.tx(() =>
+      x.d.save(x.designer, p.id, { expectedVersion: p.version, scene }),
+    );
+    x.s.tx(() => x.d.choose(x.client, a.id, { choice }));
+    const after = x.d.project(x.designer, p.id);
+    assert.equal(after.status, "draft");
+    assert.equal(after.version, draft.version);
+    assert.deepEqual(after.scene, scene);
+    assert.equal(
+      x.d.publicSubmission(x.client, a.id).state,
+      choice === "self" ? "self_completed" : "ordered",
+    );
+  }
+});
+test("含家具的损坏房间几何也应返回校验错误", () => {
+  const s = defaultScene();
+  s.rooms[0].points = [null, null, null];
+  s.objects = [
+    {
+      id: "bad-geometry",
+      roomId: "room-1",
+      source: "existing",
+      x: 1000,
+      y: 0,
+      z: 1000,
+      width: 400,
+      depth: 400,
+      height: 400,
+      rotation: 0,
+    },
+  ];
+  assert.ok(validateScene(s).length > 0);
+});
+test("支付事件空对象和非法字段明确拒绝", (t) => {
+  const x = fixture(t);
+  for (const event of [
+    null,
+    [],
+    {},
+    { eventId: "x", orderId: "id", amountFen: -1, currency: "CNY" },
+  ])
+    assert.throws(
+      () => x.s.tx(() => x.d.payment("sandbox", event, JSON.stringify(event))),
+      (e) => e.status === 422,
+    );
+});

@@ -16,6 +16,7 @@ export function createApp({
   sandboxSecret,
   secureCookies = false,
   environment = "development",
+  revision = "workspace",
 } = {}) {
   const store = new Store(path.join(dataDir, "app.sqlite")),
     d = new Domain(store),
@@ -63,6 +64,7 @@ export function createApp({
           service: "space-master",
           version: "0.1.0",
           environment,
+          revision,
           sandboxPayments: !!sandboxSecret,
         });
       if (
@@ -408,6 +410,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     adminPassword: process.env.SEED_ADMIN_PASSWORD,
     sandboxSecret: process.env.SANDBOX_PAYMENT_SECRET,
     secureCookies: secure,
+    revision: process.env.APP_REVISION || "workspace",
   });
   app.server.listen(
     Number(process.env.PORT || 3000),

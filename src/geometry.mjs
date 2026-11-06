@@ -187,7 +187,7 @@ export function validateScene(s) {
     if (
       Array.isArray(r.points) &&
       r.points.length >= 3 &&
-      r.points.every((p) => finite(p.x) && finite(p.z))
+      r.points.every((p) => p && finite(p.x) && finite(p.z))
     ) {
       if (corners.some((p) => !inside(p, r.points)))
         add("OUTSIDE", "家具超出房间");
@@ -210,4 +210,67 @@ export function validateScene(s) {
     }
   }
   return errors;
+}
+
+/** Find an in-room non-overlapping floor position; return null rather than silently placing outside. */
+export function findPlacement(room, dimensions, objects = []) {
+  if (!room?.points?.length || dimensions.height > room.height) return null;
+  const minX = Math.min(...room.points.map((p) => p.x)),
+    maxX = Math.max(...room.points.map((p) => p.x));
+  const minZ = Math.min(...room.points.map((p) => p.z)),
+    maxZ = Math.max(...room.points.map((p) => p.z));
+  const startX = Math.ceil(minX + dimensions.width / 2),
+    endX = Math.floor(maxX - dimensions.width / 2);
+  const startZ = Math.ceil(minZ + dimensions.depth / 2),
+    endZ = Math.floor(maxZ - dimensions.depth / 2);
+  if (startX > endX || startZ > endZ) return null;
+  const step = Math.max(
+    100,
+    Math.ceil(Math.max(endX - startX, endZ - startZ) / 30),
+  );
+  let id = "__placement__";
+  const used = [room.id, ...room.wallIds, ...room.openings.map((o) => o.id)];
+  while (used.includes(id)) id += "_";
+  const candidates = [];
+  for (let z = startZ; z <= endZ; z += step)
+    for (let x = startX; x <= endX; x += step) candidates.push({ x, z });
+  for (const pos of candidates) {
+    const object = {
+      ...dimensions,
+      ...pos,
+      id,
+      roomId: room.id,
+      source: "existing",
+      y: 0,
+      rotation: 0,
+    };
+    if (
+      validateScene({
+        schemaVersion: 1,
+        unit: "mm",
+        rooms: [room],
+        objects: [object],
+      }).length
+    )
+      continue;
+    // Conservative rotated bounding boxes avoid spawning directly on existing objects.
+    const blocked = objects.some(
+      (o) =>
+        o.roomId === room.id &&
+        o.y < object.height &&
+        o.y + o.height > 0 &&
+        Math.abs(o.x - object.x) <
+          (Math.abs(Math.cos(o.rotation)) * o.width +
+            Math.abs(Math.sin(o.rotation)) * o.depth +
+            object.width) /
+            2 &&
+        Math.abs(o.z - object.z) <
+          (Math.abs(Math.sin(o.rotation)) * o.width +
+            Math.abs(Math.cos(o.rotation)) * o.depth +
+            object.depth) /
+            2,
+    );
+    if (!blocked) return pos;
+  }
+  return null;
 }

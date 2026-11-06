@@ -1,4 +1,4 @@
-import { validateScene } from "/geometry.mjs";
+import { validateScene, findPlacement } from "/geometry.mjs";
 const $ = (id) => document.getElementById(id),
   content = $("content");
 let me = null,
@@ -48,6 +48,19 @@ const card = (title, parent = content) => {
   parent.append(c);
   return c;
 };
+const money = (value) =>
+  value == null
+    ? "—"
+    : new Intl.NumberFormat("zh-CN", {
+        style: "currency",
+        currency: "CNY",
+      }).format(value / 100);
+const workspaceKey = (userId) => "space-master:workspace:" + userId;
+function rememberWorkspace() {
+  try {
+    localStorage.setItem(workspaceKey(me.user.id), w.id);
+  } catch {}
+}
 function table(rows, fields, parent) {
   const t = el("table"),
     head = el("tr");
@@ -55,7 +68,8 @@ function table(rows, fields, parent) {
   t.append(head);
   for (const row of rows) {
     const tr = el("tr");
-    for (const [k] of fields) tr.append(el("td", String(row[k] ?? "")));
+    for (const [k, , format] of fields)
+      tr.append(el("td", format ? format(row[k]) : String(row[k] ?? "")));
     t.append(tr);
   }
   parent.append(t);
@@ -150,7 +164,16 @@ async function login() {
 }
 async function start() {
   me = await api("/me");
-  w = me.workspaces.find((x) => x.id === w?.id) || me.workspaces[0];
+  let preferred;
+  try {
+    preferred = localStorage.getItem(workspaceKey(me.user.id));
+  } catch {}
+  w =
+    me.workspaces.find((x) => x.id === w?.id) ||
+    me.workspaces.find((x) => x.id === preferred) ||
+    me.workspaces[0];
+  if (!me.user.platformAdmin && view === "admin") view = "projects";
+  rememberWorkspace();
   $("identity").textContent = me.user.username;
   $("workspace").hidden = false;
   $("logout").hidden = false;
@@ -191,6 +214,7 @@ $("workspace").onchange = run(async (e) => {
   }
   epoch++;
   w = me.workspaces.find((x) => x.id === e.target.value);
+  rememberWorkspace();
   await render();
 });
 $("logout").onclick = run(async () => {
@@ -199,6 +223,7 @@ $("logout").onclick = run(async () => {
   await api("/auth/logout", "POST", {});
   me = null;
   w = null;
+  view = "projects";
   await login();
 });
 window.addEventListener("beforeunload", (e) => {
@@ -212,6 +237,12 @@ async function render() {
   clean();
   for (const b of $("nav").children)
     b.classList.toggle("active", b.dataset.view === view);
+  const canManageCustomers = ["owner", "admin"].includes(w.role);
+  if (view === "customers" && !canManageCustomers) view = "projects";
+  for (const b of $("nav").children) {
+    b.hidden = b.dataset.view === "customers" && !canManageCustomers;
+    b.classList.toggle("active", b.dataset.view === view);
+  }
   const pages = {
     projects: projectsPage,
     catalog: catalogPage,
@@ -228,11 +259,16 @@ async function projectsPage(n) {
   title("项目与空间", "客户、场景、提交版本与交付记录在同一个项目中关联。");
   const rows = await api(ws("projects"));
   if (n !== epoch) return;
+  if (!["owner", "admin", "designer"].includes(w.role)) {
+    content.append(el("p", "当前岗位没有项目设计权限。"));
+    return;
+  }
   const c = card("创建项目");
   let customers = [];
   try {
     customers = await api(ws("customers"));
   } catch {}
+  if (n !== epoch) return;
   form(
     c,
     [
@@ -297,6 +333,9 @@ async function editor(id) {
   const cat = await api("/workspaces/" + p.workspace_id + "/catalog");
   if (epoch !== openedEpoch || w.id !== openedWorkspace.id) return;
   clean();
+  const editorEpoch = ++epoch;
+  const isCurrent = () => epoch === editorEpoch && project?.id === id;
+  const editable = ["draft", "changes_requested"].includes(p.status);
   project = p;
   catalog = cat;
   title(
@@ -313,7 +352,17 @@ async function editor(id) {
     selected = null,
     history = [],
     future = [];
+  let editSerial = 0,
+    saving = false;
+  let saveButton, forkButton;
+  const mutationButton = (label, fn, cls = "") => {
+    const b = button(label, fn, cls);
+    b.disabled = !editable;
+    return b;
+  };
   const checkpoint = () => {
+    if (!editable) throw Error("方案已提交或锁定，请等待审核或新建修订");
+    editSerial++;
     history.push(structuredClone(project.scene));
     future = [];
     dirty = true;
@@ -340,7 +389,9 @@ async function editor(id) {
   area.append(info);
   const show = () => {
     const e = validateScene(project.scene);
+    if (saveButton) saveButton.disabled = !editable || saving;
     status.textContent =
+      (!editable ? "只读方案 · " : "") +
       "v" +
       project.version +
       " · " +
@@ -349,7 +400,9 @@ async function editor(id) {
       (dirty ? "有未保存修改" : "已保存") +
       (e.length ? " · " + e.map((x) => x.message).join("；") : "");
     if (mode === "3d") {
-      viewer?.update(project.scene, catalog, notice);
+      viewer?.update(project.scene, catalog, notice).catch((error) => {
+        if (isCurrent()) notice("3D预览失败：" + error.message, true);
+      });
       return;
     }
     svg.replaceChildren();
@@ -383,9 +436,8 @@ async function editor(id) {
           class: "corner",
         });
         c.onpointerdown = (e) => {
-          if (draw) return;
-          checkpoint();
-          drag = { room: r.id, index: i };
+          if (draw || !editable) return;
+          drag = { room: r.id, index: i, moved: false };
           svg.setPointerCapture(e.pointerId);
           e.stopPropagation();
         };
@@ -401,12 +453,18 @@ async function editor(id) {
         stroke: "#27434a",
         "stroke-width": 20,
         transform: `rotate(${(o.rotation * 180) / Math.PI} ${o.x} ${o.z})`,
+        "data-object-id": o.id,
       });
       rect.onpointerdown = (e) => {
-        if (draw) return;
+        if (draw || !editable) return;
         selected = o.id;
-        checkpoint();
-        drag = { object: o.id };
+        const p = position(e);
+        drag = {
+          object: o.id,
+          offsetX: p.x - o.x,
+          offsetZ: p.z - o.z,
+          moved: false,
+        };
         svg.setPointerCapture(e.pointerId);
         props();
         e.stopPropagation();
@@ -431,12 +489,16 @@ async function editor(id) {
     return { x: Math.round(pt.x / 10) * 10, z: Math.round(pt.y / 10) * 10 };
   };
   svg.onpointermove = (e) => {
-    if (!drag) return;
+    if (!drag || !isCurrent()) return;
     const p = position(e);
+    if (!drag.moved) {
+      checkpoint();
+      drag.moved = true;
+    }
     if (drag.object) {
       const o = project.scene.objects.find((o) => o.id === drag.object);
-      o.x = p.x;
-      o.z = p.z;
+      o.x = p.x - drag.offsetX;
+      o.z = p.z - drag.offsetZ;
     } else
       project.scene.rooms.find((r) => r.id === drag.room).points[drag.index] =
         p;
@@ -447,6 +509,13 @@ async function editor(id) {
     drag = null;
     props();
     show();
+  };
+  svg.onpointercancel = svg.onlostpointercapture = () => {
+    if (drag) {
+      drag = null;
+      props();
+      show();
+    }
   };
   svg.onclick = (e) => {
     if (draw) {
@@ -493,6 +562,7 @@ async function editor(id) {
       );
       ip.y.value = o.y;
       ip.rotation.value = Math.round((o.rotation * 180) / Math.PI);
+      ip.rotation.min = "-360";
       side.append(
         button("吸附天花板", () => {
           checkpoint();
@@ -545,7 +615,14 @@ async function editor(id) {
     }
     for (const v of availableProducts) {
       add.append(
-        button(v.name + " · ¥" + v.sale_fen / 100, () => {
+        mutationButton(v.name + " · ¥" + v.sale_fen / 100, () => {
+          const dimensions = {
+            width: v.width_mm,
+            depth: v.depth_mm,
+            height: v.height_mm,
+          };
+          const pos = findPlacement(r, dimensions, project.scene.objects);
+          if (!pos) throw Error("房间内没有足够的空位，请先移动家具或调整房间");
           checkpoint();
           const o = {
             id: crypto.randomUUID(),
@@ -553,9 +630,9 @@ async function editor(id) {
             source: "new",
             variantId: v.id,
             offerId: v.offer_id,
-            x: Math.round(v.width_mm / 2) + 100,
+            x: pos.x,
             y: 0,
-            z: Math.round(v.depth_mm / 2) + 100,
+            z: pos.z,
             width: v.width_mm,
             depth: v.depth_mm,
             height: v.height_mm,
@@ -623,44 +700,72 @@ async function editor(id) {
       },
       "调整墙长",
     );
+    if (!editable)
+      for (const control of side.querySelectorAll("input,select,button")) {
+        if (control.textContent !== "返回项目列表") control.disabled = true;
+      }
   };
   bar.append(
     button("← 项目", async () => {
       if (confirmLeave()) await render();
     }),
-    button(
+    (saveButton = mutationButton(
       "保存",
       async () => {
-        const saved = await api("/projects/" + id, "PUT", {
-          expectedVersion: project.version,
-          scene: project.scene,
-        });
-        project = saved;
-        dirty = false;
+        if (saving) return;
+        if (draw) throw Error("请先完成或取消画墙");
+        saving = true;
         show();
-        notice("已保存到服务器");
+        const savedSerial = editSerial;
+        const sent = structuredClone(project.scene);
+        try {
+          const saved = await api("/projects/" + id, "PUT", {
+            expectedVersion: project.version,
+            scene: sent,
+          });
+          if (!isCurrent()) return;
+          if (savedSerial === editSerial) {
+            project = saved;
+            dirty = false;
+          } else {
+            project.version = saved.version;
+            project.status = saved.status;
+            dirty = true;
+          }
+          show();
+          notice(
+            dirty
+              ? "已保存此前版本；保存期间的新修改仍待保存"
+              : "已保存到服务器",
+          );
+        } finally {
+          saving = false;
+          if (isCurrent()) show();
+        }
       },
       "primary",
-    ),
-    button("撤销", () => {
+    )),
+    mutationButton("撤销", () => {
       if (history.length) {
         future.push(structuredClone(project.scene));
         project.scene = history.pop();
+        editSerial++;
         dirty = true;
         props();
         show();
       }
     }),
-    button("重做", () => {
+    mutationButton("重做", () => {
       if (future.length) {
         history.push(structuredClone(project.scene));
         project.scene = future.pop();
+        editSerial++;
         dirty = true;
         props();
         show();
       }
     }),
-    button("画墙 / 闭合", () => {
+    mutationButton("画墙 / 闭合", () => {
       if (draw) {
         if (points.length < 3) throw Error("至少点选三个墙角");
         checkpoint();
@@ -690,7 +795,32 @@ async function editor(id) {
       viewport.hidden = false;
       if (!viewer) {
         const { Viewer } = await import("/viewer.bundle.js");
-        viewer = new Viewer(viewport);
+        if (!isCurrent()) return;
+        viewer = new Viewer(
+          viewport,
+          editable
+            ? {
+                onSelect: (objectId) => {
+                  if (!isCurrent()) return;
+                  selected = objectId;
+                  props();
+                },
+                onMove: (objectId, pos) => {
+                  if (!isCurrent()) return;
+                  const o = project.scene.objects.find(
+                    (o) => o.id === objectId,
+                  );
+                  if (!o) return;
+                  checkpoint();
+                  o.x = pos.x;
+                  o.z = pos.z;
+                  selected = o.id;
+                  props();
+                  show();
+                },
+              }
+            : {},
+        );
       }
       show();
     }),
@@ -706,21 +836,24 @@ async function editor(id) {
         show();
       }
     }),
-    button("生成提交快照", async () => {
-      if (dirty) throw Error("请先保存当前修改");
+    mutationButton("生成提交快照", async () => {
+      if (dirty || saving) throw Error("请先完成保存当前修改");
       await api("/projects/" + id + "/submit", "POST", {
         expectedVersion: project.version,
       });
       await render();
       notice("快照已提交，客户可在客户审阅中查看");
     }),
-    button("新建修订", async () => {
+    (forkButton = button("新建修订", async () => {
       if (dirty) throw Error("请先保存修改");
       await api("/projects/" + id + "/fork", "POST", {
         expectedVersion: project.version,
       });
       await editor(id);
-    }),
+    })),
+  );
+  forkButton.disabled = !["finalized", "self_completed", "ordered"].includes(
+    project.status,
   );
   props();
   show();
@@ -777,6 +910,7 @@ async function membersPage(n) {
     "发送邀请",
   );
   const rows = await api(ws("members"));
+  if (n !== epoch) return;
   const list = card("企业成员");
   for (const m of rows) {
     const row = el("div", "", "row");
@@ -841,11 +975,26 @@ async function catalogPage(n) {
       ["width_mm", "宽mm"],
       ["depth_mm", "深mm"],
       ["height_mm", "高mm"],
-      ["sale_fen", "售价分"],
+      ["sale_fen", "售价", money],
       ["stock", "库存"],
     ],
     card("当前工作空间产品库"),
   );
+  if (!["owner", "admin", "product_manager"].includes(w.role)) {
+    const c = card("模型资产");
+    table(
+      assets,
+      [
+        ["name", "文件"],
+        ["state", "状态"],
+      ],
+      c,
+    );
+    c.append(
+      el("p", "当前岗位可使用本空间产品；上传模型和维护供给需产品管理员权限。"),
+    );
+    return;
+  }
   const c = card("上传自包含 GLB");
   c.append(
     el(
@@ -853,6 +1002,16 @@ async function catalogPage(n) {
       "每片4MiB；如中断，重新选同一文件可查询已完成分片后续传。500MiB是接口上限，大文件仍需容量验收。",
     ),
   );
+  const uploadWorkspaceId = w.id,
+    uploadUserId = me.user.id;
+  const checkUploadContext = () => {
+    if (
+      epoch !== n ||
+      w?.id !== uploadWorkspaceId ||
+      me?.user.id !== uploadUserId
+    )
+      throw Error("工作空间或账号已切换，请在原空间重新选择文件续传");
+  };
   const file = el("input");
   file.type = "file";
   file.accept = ".glb";
@@ -865,17 +1024,20 @@ async function catalogPage(n) {
         const f = file.files[0];
         if (!f) throw Error("请选择GLB文件");
         if (f.size > 500 * 1024 * 1024) throw Error("模型超过500MiB");
+        checkUploadContext();
         const bytes = await f.arrayBuffer(),
           sha256 = Array.from(
             new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
           )
             .map((x) => x.toString(16).padStart(2, "0"))
             .join(""),
-          key = "upload:" + me.user.id + ":" + w.id + ":" + sha256;
+          key =
+            "upload:" + uploadUserId + ":" + uploadWorkspaceId + ":" + sha256;
+        checkUploadContext();
         last = localStorage.getItem(key);
         if (!last) {
           last = (
-            await api(ws("uploads"), "POST", {
+            await api("/workspaces/" + uploadWorkspaceId + "/uploads", "POST", {
               name: f.name,
               size: f.size,
               sha256,
@@ -884,9 +1046,11 @@ async function catalogPage(n) {
           ).id;
           localStorage.setItem(key, last);
         }
+        checkUploadContext();
         const state = await api("/uploads/" + last);
         const done = new Set(state.completedParts.map((p) => p.part));
         for (let n = 0; n < state.parts; n++) {
+          checkUploadContext();
           if (done.has(n)) continue;
           const r = await fetch("/api/v1/uploads/" + last + "/parts/" + n, {
             method: "PUT",
@@ -895,7 +1059,9 @@ async function catalogPage(n) {
           if (!r.ok) throw Error((await r.json()).error.message);
           notice("已上传 " + (n + 1) + " / " + state.parts);
         }
+        checkUploadContext();
         await api("/uploads/" + last + "/complete", "POST", {});
+        checkUploadContext();
         localStorage.removeItem(key);
         await render();
         notice("文件已存储，材质、尺寸和可编辑性尚待预览验证");
@@ -980,8 +1146,11 @@ async function reviewsPage(n) {
     );
     c.append(
       button("查看提交", async () => {
+        const requestedEpoch = epoch;
         const a = await api("/submissions/" + r.id);
+        if (epoch !== requestedEpoch) return;
         clean();
+        ++epoch;
         title(a.projectName + " · v" + a.version, "版本哈希 " + a.hash);
         const x = card("冻结清单 · ¥" + a.bom.totalFen / 100);
         table(
@@ -990,8 +1159,8 @@ async function reviewsPage(n) {
             ["sku", "SKU"],
             ["name", "名称"],
             ["quantity", "数量"],
-            ["unitPriceFen", "销售单价分"],
-            ["subtotalFen", "合计分"],
+            ["unitPriceFen", "销售单价", money],
+            ["subtotalFen", "合计", money],
           ],
           x,
         );
@@ -1022,6 +1191,7 @@ async function reviewsPage(n) {
             height: o.depth,
             fill: "#638489",
             transform: `rotate(${(o.rotation * 180) / Math.PI} ${o.x} ${o.z})`,
+            "data-object-id": o.id,
           }))
             box.setAttribute(k, v);
           plan.append(box);
@@ -1108,7 +1278,7 @@ async function ordersPage(n) {
     rows,
     [
       ["id", "订单"],
-      ["amount_fen", "金额分"],
+      ["amount_fen", "金额", money],
       ["currency", "币种"],
       ["status", "状态"],
     ],
@@ -1127,7 +1297,7 @@ async function purchasesPage(n) {
         ["sku", "SKU"],
         ["name", "产品"],
         ["quantity", "数量"],
-        ["unitCostFen", "供货单价分"],
+        ["unitCostFen", "供货单价", money],
       ],
       c,
     );

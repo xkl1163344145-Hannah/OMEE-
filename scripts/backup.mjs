@@ -1,7 +1,7 @@
 import { DatabaseSync, backup } from "node:sqlite";
 import fs from "node:fs/promises";
 import path from "node:path";
-import crypto from "node:crypto";
+import { hashFile } from "./hash-file.mjs";
 const [source, target] = process.argv.slice(2);
 if (!source || !target)
   throw Error("用法 node scripts/backup.mjs <data目录> <不存在的备份目录>");
@@ -16,8 +16,12 @@ try {
   await fs
     .cp(path.join(src, "assets"), path.join(dest, "assets"), {
       recursive: true,
-      filter: (p) =>
-        !p.includes(path.sep + "tmp") && !p.endsWith(".assembling"),
+      filter: (p) => {
+        const relative = path.relative(path.join(src, "assets"), p);
+        return (
+          relative.split(path.sep)[0] !== "tmp" && !p.endsWith(".assembling")
+        );
+      },
     })
     .catch((e) => {
       if (e.code !== "ENOENT") throw e;
@@ -28,12 +32,8 @@ try {
       const p = path.join(dir, item.name);
       if (item.isDirectory()) await walk(p);
       else {
-        const data = await fs.readFile(p);
-        files.push({
-          path: path.relative(dest, p),
-          size: data.length,
-          sha256: crypto.createHash("sha256").update(data).digest("hex"),
-        });
+        if (item.isSymbolicLink()) throw Error("备份中不允许符号链接");
+        files.push({ path: path.relative(dest, p), ...(await hashFile(p)) });
       }
     }
   }

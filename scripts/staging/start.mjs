@@ -13,6 +13,7 @@ if (process.env.SANDBOX_PAYMENT_SECRET)
 const app = createApp({
     dataDir: root,
     environment: "isolated-qa",
+    revision: process.env.QA_REVISION || "unversioned-qa",
     secureCookies: process.env.QA_HTTPS === "true",
   }),
   port = Number(process.env.QA_PORT || 3301),

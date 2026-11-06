@@ -33,6 +33,7 @@ export class Assets {
       mode: 0o700,
     });
     this.d.s.tx(() => {
+      this.d.access(u, w, ["owner", "admin", "product_manager"]);
       this.d.s.run(
         "INSERT INTO uploads VALUES(?,?,?,?,?,?,?,'uploading')",
         id,

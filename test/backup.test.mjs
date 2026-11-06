@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { Store } from "../src/db.mjs";
-import { Domain } from "../src/domain.mjs";
+import { Domain, hash } from "../src/domain.mjs";
 test("备份、散列校验与隔离目录恢复；损坏备份拒绝", (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "omee-backup-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -17,6 +17,24 @@ test("备份、散列校验与隔离目录恢复；损坏备份拒绝", (t) => {
   const u = s.get("SELECT * FROM users"),
     w = d.me(u).workspaces[0],
     p = s.tx(() => d.createProject(u, w.id, { name: "恢复项目" }));
+  const model = Buffer.from("isolated-backup-asset-fixture");
+  fs.mkdirSync(path.join(data, "assets", "tmp", "unfinished"), {
+    recursive: true,
+  });
+  fs.writeFileSync(path.join(data, "assets", "asset-fixture.glb"), model);
+  fs.writeFileSync(
+    path.join(data, "assets", "tmp", "unfinished", "0"),
+    "incomplete upload",
+  );
+  s.run(
+    "INSERT INTO assets VALUES(?,?,?,?,?,'stored_unverified','glb',?)",
+    "asset-fixture",
+    w.id,
+    "备份样例",
+    hash(model),
+    model.length,
+    u.id,
+  );
   s.close();
   const run = (script, ...args) =>
     spawnSync(
@@ -25,6 +43,11 @@ test("备份、散列校验与隔离目录恢复；损坏备份拒绝", (t) => {
       { encoding: "utf8" },
     );
   assert.equal(run("backup.mjs", data, backup).status, 0);
+  assert.deepEqual(
+    fs.readFileSync(path.join(backup, "assets", "asset-fixture.glb")),
+    model,
+  );
+  assert.equal(fs.existsSync(path.join(backup, "assets", "tmp")), false);
   const checked = run("verify-backup.mjs", backup);
   assert.equal(checked.status, 0, checked.stderr);
   const restored = path.join(root, "restored");

@@ -294,3 +294,25 @@ pre {
     display: none;
   }
 }
+
+/* Keep the scene visible while long property forms scroll independently. */
+.editor {
+  align-items: start;
+}
+.editor > .card:first-child {
+  position: sticky;
+  top: 16px;
+}
+.editor > .card:last-child {
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+}
+@media (max-width: 900px) {
+  .editor > .card:first-child {
+    position: static;
+  }
+  .editor > .card:last-child {
+    max-height: none;
+    overflow-y: visible;
+  }
+}
