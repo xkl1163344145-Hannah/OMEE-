@@ -1,0 +1,128 @@
+[
+  {
+    "archive": "space-master-deploy.zip",
+    "sha256": "d7b3b93e2fd113ca5697bc0d0f676aaae0aecca562f783a99158bd2a2a6e3e83",
+    "files": 11,
+    "expandedBytes": 75533
+  },
+  {
+    "archive": "space-master-designer-bridge-test.zip",
+    "sha256": "04963cf899c470f410c38ee53431d6cd6e440ff143c59850907c15d83073b152",
+    "files": 31,
+    "expandedBytes": 311941
+  },
+  {
+    "archive": "space-master-designer-workbench-v1.zip",
+    "sha256": "ad19553a23c7919c9cc04de16e8f57cd3126ede3e51b4aa042de5960beac1e6b",
+    "files": 6,
+    "expandedBytes": 36712
+  },
+  {
+    "archive": "space-master-four-portals-v1.1.zip",
+    "sha256": "6ab30f69c32eb83a002853b9c43228a9066eec5faee087f4df76205a7f3c6094",
+    "files": 25,
+    "expandedBytes": 268437
+  },
+  {
+    "archive": "space-master-integrated-saas-v1.zip",
+    "sha256": "9ddfc3d05258512863470c48491699285e5f3da75ecdd6ef7bf5ef4443a672bf",
+    "files": 23,
+    "expandedBytes": 253070
+  },
+  {
+    "archive": "space-master-multiformat-v2.zip",
+    "sha256": "1aec1a90822087f33cabdac0005dc4751b328035cffb740b7f005b51cca02e1e",
+    "files": 12,
+    "expandedBytes": 82722
+  },
+  {
+    "archive": "space-master-mvp.zip",
+    "sha256": "1f0418e373c0e5e6a5c9d026d407fdba66c0fb0651443cfcf8286b719451661b",
+    "files": 2,
+    "expandedBytes": 22355
+  },
+  {
+    "archive": "space-master-phase0.zip",
+    "sha256": "ec6e5108cc0480ab9893356533c1e2590fe7ab3b401b72eabde9f27019b3306a",
+    "files": 2,
+    "expandedBytes": 5789
+  },
+  {
+    "archive": "space-master-real-model-v1.zip",
+    "sha256": "50493710565a1138bfeca59d62d9820f83a8307bd4f3dbe1b02270aad249cb25",
+    "files": 6,
+    "expandedBytes": 61395
+  },
+  {
+    "archive": "space-master-saas-interactive-v1.zip",
+    "sha256": "d2d70bbb9f51ffe624208b83e407634bd63c9587756afffaa5a1b5673442c787",
+    "files": 14,
+    "expandedBytes": 63555
+  },
+  {
+    "archive": "space-master-saas-phase1.zip",
+    "sha256": "24f0eda70b7d7b123fb61494b2e950baff95bea6048cebcc6524bb4c1c19b96f",
+    "files": 12,
+    "expandedBytes": 34274
+  },
+  {
+    "archive": "space-master-saas-unified-v0.3.zip",
+    "sha256": "c379141120641aa6773785e143f8d31de7519af76c497eba359b1c4e54f81b29",
+    "files": 19,
+    "expandedBytes": 137274
+  },
+  {
+    "archive": "space-master-ui-v4.zip",
+    "sha256": "a2541dd6a9dc5417b723c5596516bfea3823b77a726dae63d620e382f1a49b9f",
+    "files": 6,
+    "expandedBytes": 53992
+  },
+  {
+    "archive": "space-master-ui-v5.zip",
+    "sha256": "24d3c632dbf381e17fc59075190c58320bbafa891eeebc828b643e5e481fd5b8",
+    "files": 6,
+    "expandedBytes": 57440
+  },
+  {
+    "archive": "space-master-v3.zip",
+    "sha256": "6b13e33f0b26be6b32eaf3c415ad46f5b8025c8165deec0f5f5045e5318d5ab9",
+    "files": 6,
+    "expandedBytes": 46231
+  },
+  {
+    "archive": "space-master-v5.1-patch.zip",
+    "sha256": "c137dfe8f53f62b1b27be8b1f9b1230ea0e6fe3fbfc39d549233f00311aef7b9",
+    "files": 3,
+    "expandedBytes": 70574
+  },
+  {
+    "archive": "space-master-v5.3-complete-patch.zip",
+    "sha256": "01911d24cd33b07efaeb299134ed7c0469f0ea851756b5917256fc7e04d42968",
+    "files": 3,
+    "expandedBytes": 84513
+  },
+  {
+    "archive": "space-master-v5.4-safe.zip",
+    "sha256": "6379bbffa2243c8e7142958e5ce09171a8fa05a1e70b6a4c12a56fd069e0b6e5",
+    "files": 6,
+    "expandedBytes": 100946
+  },
+  {
+    "archive": "space-master-visual-floorplan-patch.zip",
+    "sha256": "db06d5e0d6969142fb9fdd56fe78ec23cf67f333505b57f3e66799456450079a",
+    "files": 3,
+    "expandedBytes": 77011
+  },
+  {
+    "archive": "空间大师-SaaS开发规格书-V1.0.zip",
+    "sha256": "b5b01c605240089813f38049267ffdfeae307819164b361177c079eefe97f07c",
+    "files": 2,
+    "expandedBytes": 50141
+  },
+  {
+    "archive": "空间大师-全量开发需求与技术规格-V2.0.zip",
+    "sha256": "805454ed8c84cc63647060ab4389c2810e5a33988de9ef122bdfc457939c5868",
+    "files": 3,
+    "expandedBytes": 106450
+  }
+]

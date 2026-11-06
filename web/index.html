@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>空间大师 · OMEE</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <b>OMEE <span>空间大师</span></b
+        ><small>设计 · 确认 · 交付</small>
+      </div>
+      <div id="identity"></div>
+      <select id="workspace" aria-label="当前工作空间"></select
+      ><button id="logout" hidden>退出登录</button>
+    </header>
+    <aside>
+      <div class="eyebrow">SPACE MASTER / 0.1</div>
+      <nav id="nav"></nav>
+      <p>开发验收版<br />采购付款仅支持沙箱</p>
+    </aside>
+    <main>
+      <div id="notice" role="status"></div>
+      <section id="content"></section>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

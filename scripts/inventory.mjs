@@ -1,0 +1,43 @@
+// Read-only legacy inventory. Never imports executable JS, overwrites files or guesses ownership.
+import fs from "node:fs/promises";
+import path from "node:path";
+import { hashFile } from "./hash-file.mjs";
+const root = path.resolve(process.argv[2] || "");
+if (!process.argv[2])
+  throw Error("用法 node scripts/inventory.mjs <旧数据目录> > inventory.json");
+const entries = [];
+async function walk(dir) {
+  for (const item of await fs.readdir(dir, { withFileTypes: true })) {
+    const p = path.join(dir, item.name);
+    if (item.isSymbolicLink()) {
+      entries.push({ path: path.relative(root, p), status: "symlink_skipped" });
+      continue;
+    }
+    if (item.isDirectory()) await walk(p);
+    else {
+      const row = { path: path.relative(root, p), ...(await hashFile(p)) };
+      if (item.name.endsWith(".json") && row.size > 16 * 1024 * 1024) {
+        row.migration = "large_json_requires_streaming_review";
+      } else if (item.name.endsWith(".json")) {
+        try {
+          const j = JSON.parse(await fs.readFile(p, "utf8"));
+          row.shape = Array.isArray(j)
+            ? { kind: "array", length: j.length }
+            : { kind: typeof j, keys: Object.keys(j || {}) };
+          row.migration = "manual_owner_and_unit_review_required";
+        } catch {
+          row.migration = "invalid_json";
+        }
+      }
+      entries.push(row);
+    }
+  }
+}
+await walk(root);
+console.log(
+  JSON.stringify(
+    { root, generatedAt: new Date().toISOString(), readOnly: true, entries },
+    null,
+    2,
+  ),
+);
