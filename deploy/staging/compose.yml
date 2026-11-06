@@ -1,0 +1,37 @@
+name: omee-space-master-qa
+services:
+  qa:
+    image: ${QA_IMAGE:?请指定独立QA镜像及版本标签}
+    user: "${QA_UID:?请设置运行用户UID}:${QA_GID:?请设置运行用户GID}"
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    cpus: 0.75
+    pids_limit: 100
+    ports:
+      - "127.0.0.1:3301:3301"
+    environment:
+      QA_DATA_DIR: /app/data
+      QA_PORT: 3301
+      QA_HOST: 0.0.0.0
+      QA_HTTPS: ${QA_HTTPS:-false}
+    volumes:
+      - type: bind
+        source: ${QA_DATA_PATH:?请指定独立的QA数据绝对路径}
+        target: /app/data
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3301/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

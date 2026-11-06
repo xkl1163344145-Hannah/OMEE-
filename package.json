@@ -11,7 +11,9 @@
     "test": "node --test test/*.test.mjs",
     "backup": "node scripts/backup.mjs",
     "build": "esbuild web/viewer.js --bundle --format=esm --outfile=web/viewer.bundle.js",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "qa:seed": "node scripts/staging/seed.mjs",
+    "qa:start": "node scripts/staging/start.mjs"
   },
   "dependencies": {
     "three": "0.180.0"

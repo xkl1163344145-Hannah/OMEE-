@@ -939,7 +939,13 @@ async function reviewsPage(n) {
   const rows = await api("/submissions");
   if (n !== epoch) return;
   for (const r of rows) {
-    const c = card("提交 " + r.id.slice(0, 8) + " · " + r.state);
+    const c = card(
+      (r.projectName || "提交 " + r.id.slice(0, 8)) +
+        " · v" +
+        (r.version || "?") +
+        " · " +
+        r.state,
+    );
     c.append(
       button("查看提交", async () => {
         const a = await api("/submissions/" + r.id);

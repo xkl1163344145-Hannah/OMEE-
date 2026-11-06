@@ -6,3 +6,7 @@ playwright-report/
 test-results/
 *.sqlite*
 core
+qa-runtime/
+accounts.private.json
+*.private.json
+.qa-environment

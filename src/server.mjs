@@ -15,6 +15,7 @@ export function createApp({
   adminPassword,
   sandboxSecret,
   secureCookies = false,
+  environment = "development",
 } = {}) {
   const store = new Store(path.join(dataDir, "app.sqlite")),
     d = new Domain(store),
@@ -61,6 +62,7 @@ export function createApp({
         return send({
           service: "space-master",
           version: "0.1.0",
+          environment,
           sandboxPayments: !!sandboxSecret,
         });
       if (
@@ -85,7 +87,18 @@ export function createApp({
               ? "text/css"
               : "text/javascript",
         });
-        return res.end(await fs.readFile(file));
+        let page = await fs.readFile(file);
+        if (name === "index.html" && environment === "isolated-qa") {
+          page = Buffer.from(
+            page
+              .toString()
+              .replace(
+                "<body>",
+                '<body><div role="note" style="position:fixed;bottom:0;left:0;right:0;z-index:999;background:#664b12;color:#fff2c9;padding:8px 20px;text-align:center">隔离验收环境 · 全部为虚构样例 · 付款入口关闭 · 请勿录入真实客户资料</div>',
+              ),
+          );
+        }
+        return res.end(page);
       }
       if (!p.startsWith("/api/v1/")) fail(404, "NOT_FOUND", "接口不存在");
       if (!["GET", "HEAD"].includes(m)) {
@@ -293,7 +306,7 @@ export function createApp({
         return send(
           store
             .all(
-              "SELECT id,project_id,customer_user_id,state,hash FROM submissions",
+              "SELECT id,project_id,customer_user_id,state,hash,json_extract(payload, '$.projectName') AS projectName,json_extract(payload, '$.version') AS version FROM submissions",
             )
             .filter(
               (a) =>

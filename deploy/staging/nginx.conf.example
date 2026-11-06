@@ -1,0 +1,18 @@
+# 仅在确认测试域名、证书路径与现有网关后添加独立server；不得覆盖已有配置。
+server {
+    listen 443 ssl;
+    server_name QA_HOSTNAME_REPLACE;
+    ssl_certificate QA_CERTIFICATE_PATH_REPLACE;
+    ssl_certificate_key QA_CERTIFICATE_KEY_PATH_REPLACE;
+    client_max_body_size 6m;
+    add_header X-Robots-Tag "noindex, nofollow" always;
+    # 根据测试者公网IP设置allow/deny后再启用公网入口；不默认公开。
+    # allow TESTER_IP_REPLACE;
+    # deny all;
+    location / {
+        proxy_pass http://127.0.0.1:3301;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 60s;
+    }
+}

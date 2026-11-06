@@ -1,0 +1,12 @@
+.git
+node_modules
+data
+qa-runtime
+.env
+.env.*
+*.private.json
+.qa-environment
+*.sqlite*
+playwright-report
+test-results
+core
