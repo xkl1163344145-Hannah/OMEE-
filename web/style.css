@@ -1,0 +1,296 @@
+:root {
+  font-family: Inter, "PingFang SC", system-ui, sans-serif;
+  color: #e5edf1;
+  background: #10151d;
+  font-size: 14px;
+  color-scheme: dark;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+header {
+  height: 76px;
+  border-bottom: 1px solid #2c3542;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 30px;
+  background: #151d28;
+}
+header b {
+  font-size: 24px;
+  letter-spacing: 2px;
+}
+header b span {
+  font-size: 17px;
+  letter-spacing: 0;
+  margin-left: 12px;
+}
+small {
+  display: block;
+  color: #8596aa;
+  margin-top: 5px;
+  font-size: 11px;
+}
+#identity {
+  margin-left: auto;
+}
+aside {
+  width: 205px;
+  position: fixed;
+  top: 76px;
+  bottom: 0;
+  border-right: 1px solid #2c3542;
+  padding: 28px 18px;
+  display: flex;
+  flex-direction: column;
+}
+aside p {
+  margin-top: auto;
+  line-height: 1.8;
+  color: #718196;
+  font-size: 12px;
+}
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #6f8198;
+  margin-bottom: 28px;
+}
+nav {
+  display: grid;
+  gap: 10px;
+}
+nav button {
+  border: 0;
+  text-align: left;
+  padding: 13px 16px;
+  background: transparent;
+}
+nav button.active {
+  background: #203f47;
+  color: #91e4d3;
+}
+main {
+  margin-left: 205px;
+  padding: 30px;
+  max-width: 1600px;
+}
+h1 {
+  font-size: 28px;
+  font-weight: 550;
+  margin: 0 0 12px;
+}
+h2 {
+  font-weight: 500;
+  font-size: 18px;
+  margin: 0 0 20px;
+}
+p {
+  color: #9eacbd;
+  line-height: 1.8;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  border: 1px solid #364354;
+  border-radius: 6px;
+  background: #1a2432;
+  color: #e8edf2;
+  padding: 9px 12px;
+}
+button {
+  cursor: pointer;
+}
+button:hover {
+  border-color: #73ccba;
+  color: #99efdc;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+button.primary {
+  background: #6dd4bb;
+  color: #09251f;
+  border-color: #6dd4bb;
+  font-weight: 600;
+}
+button.danger {
+  color: #f7b0ab;
+}
+input,
+select {
+  max-width: 100%;
+}
+label {
+  display: grid;
+  gap: 7px;
+  color: #a8b7c9;
+  font-size: 12px;
+}
+form {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: end;
+}
+form button {
+  margin-top: 6px;
+}
+form label input {
+  min-width: 120px;
+  width: 100%;
+}
+.card {
+  background: #17202c;
+  border: 1px solid #2d3948;
+  border-radius: 10px;
+  padding: 22px;
+  margin: 20px 0;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 18px;
+}
+.grid .card {
+  margin: 0;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.muted {
+  color: #8293a8;
+  font-size: 12px;
+}
+.badge {
+  font-size: 11px;
+  border-radius: 4px;
+  background: #25433e;
+  color: #a3e3d0;
+  padding: 4px 8px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 14px;
+}
+td,
+th {
+  text-align: left;
+  padding: 12px 10px;
+  border-bottom: 1px solid #303b49;
+  font-size: 12px;
+}
+th {
+  color: #879cb2;
+  font-weight: 400;
+}
+#notice {
+  color: #b7eee0;
+  white-space: pre-wrap;
+  margin-bottom: 18px;
+}
+#notice.error {
+  color: #ffb7b7;
+}
+#login {
+  max-width: 440px;
+  margin: 80px auto;
+}
+#login form {
+  display: grid;
+}
+#workspace {
+  max-width: 250px;
+}
+#plan {
+  width: 100%;
+  height: 450px;
+  background: #e8e6e0;
+  border-radius: 8px;
+  touch-action: none;
+}
+#plan .corner {
+  cursor: grab;
+}
+#plan text {
+  fill: #29444b;
+  font-size: 100px;
+  pointer-events: none;
+}
+.editor {
+  display: grid;
+  grid-template-columns: minmax(400px, 1fr) 260px;
+  gap: 20px;
+}
+.editor > .card {
+  margin: 0;
+}
+.tools {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.property {
+  display: grid;
+  gap: 10px;
+}
+#viewport {
+  height: 450px;
+  background: #e8e6e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+#viewport canvas {
+  width: 100%;
+  height: 100%;
+}
+a {
+  color: #89dbca;
+}
+pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 400px;
+  overflow: auto;
+  font-size: 12px;
+}
+.kpi {
+  font-size: 30px;
+  margin: 16px 0 4px;
+}
+@media (max-width: 900px) {
+  aside {
+    width: 145px;
+  }
+  main {
+    margin-left: 145px;
+    padding: 18px;
+  }
+  .editor {
+    grid-template-columns: 1fr;
+  }
+  header {
+    padding: 12px;
+  }
+  header small {
+    display: none;
+  }
+  header b {
+    font-size: 18px;
+  }
+  header b span {
+    display: none;
+  }
+}

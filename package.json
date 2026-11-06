@@ -1,0 +1,24 @@
+{
+  "name": "omee-space-master",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test test/*.test.mjs",
+    "backup": "node scripts/backup.mjs",
+    "build": "esbuild web/viewer.js --bundle --format=esm --outfile=web/viewer.bundle.js",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "esbuild": "0.25.12",
+    "prettier": "3.6.2"
+  }
+}

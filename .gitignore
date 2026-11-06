@@ -1,0 +1,8 @@
+node_modules/
+data/
+.env
+web/viewer.bundle.js
+playwright-report/
+test-results/
+*.sqlite*
+core
