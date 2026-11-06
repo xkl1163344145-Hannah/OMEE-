@@ -287,14 +287,23 @@ async function projectsPage(n) {
   }
 }
 async function editor(id) {
-  const p = await api("/projects/" + id),
-    cat = await api(ws("catalog"));
+  const openedWorkspace = w,
+    openedEpoch = epoch;
+  const p = await api("/projects/" + id);
+  if (epoch !== openedEpoch || w.id !== openedWorkspace.id) return;
+  if (p.workspace_id !== openedWorkspace.id) {
+    throw Error("项目与当前工作空间不匹配，请从项目所属工作空间重新打开");
+  }
+  const cat = await api("/workspaces/" + p.workspace_id + "/catalog");
+  if (epoch !== openedEpoch || w.id !== openedWorkspace.id) return;
   clean();
   project = p;
   catalog = cat;
   title(
     p.name,
-    "毫米精度 · 拖动墙角和家具 · 真实SKU不可拉伸 · 保存后生成新修订",
+    "工作空间：" +
+      openedWorkspace.name +
+      " · 毫米精度 · 在2D中拖动家具 · 保存后生成新修订",
   );
   const bar = el("div", "", "tools");
   content.append(bar);
@@ -511,7 +520,30 @@ async function editor(id) {
       );
     }
     const add = card("添加真实SKU", side);
-    for (const v of catalog.filter((v) => v.offer_id)) {
+    const availableProducts = catalog.filter((v) => v.offer_id);
+    if (!availableProducts.length) {
+      add.append(el("p", "此工作空间暂无可添加的产品。"));
+      add.append(el("p", "当前空间：" + openedWorkspace.name, "muted"));
+      if (catalog.length) {
+        add.append(
+          el("p", "已有产品尚未关联供给报价，请由产品管理员补齐。", "muted"),
+        );
+      } else {
+        add.append(
+          el(
+            "p",
+            "产品库按工作空间隔离。要测试预置家具，请返回项目列表，切换到验收企业X，打开“验收01·编辑保存”。",
+            "muted",
+          ),
+        );
+      }
+      add.append(
+        button("返回项目列表", async () => {
+          if (confirmLeave()) await render();
+        }),
+      );
+    }
+    for (const v of availableProducts) {
       add.append(
         button(v.name + " · ¥" + v.sale_fen / 100, () => {
           checkpoint();

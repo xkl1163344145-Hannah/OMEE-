@@ -165,3 +165,39 @@ test("真实浏览器：建客户和项目、画异形墙、保存刷新、3D、
   expect(errors).toEqual([]);
   await ctx.close();
 });
+
+test("空企业产品库明确显示所属空间，不泄露其他空间SKU", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("账号", { exact: true }).fill("e2eadmin");
+  await page.getByLabel("密码", { exact: true }).fill("isolated-e2e-password");
+  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "项目与空间", exact: true })
+    .waitFor();
+  const enterpriseResponse = await page.request.post("/api/v1/enterprises", {
+    data: { name: "空产品库验收企业" },
+  });
+  expect(enterpriseResponse.ok()).toBeTruthy();
+  const enterprise = (await enterpriseResponse.json()).data;
+  const projectResponse = await page.request.post(
+    "/api/v1/workspaces/" + enterprise.id + "/projects",
+    { data: { name: "空库草稿" } },
+  );
+  expect(projectResponse.ok()).toBeTruthy();
+  await page.reload();
+  await page.getByLabel("当前工作空间").selectOption(enterprise.id);
+  await page.getByRole("button", { name: "打开空间", exact: true }).click();
+  await expect(
+    page.getByText("此工作空间暂无可添加的产品。", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("当前空间：空产品库验收企业", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "验收桌 · ¥1250", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "返回项目列表", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "项目与空间", exact: true }),
+  ).toBeVisible();
+});
